@@ -4,7 +4,11 @@ import time
 
 from loguru import logger
 
-from .utils import enable_custom_logits_processors, set_default_gpu_memory_utilization, set_default_batch_size
+from .utils import (
+    enable_custom_logits_processors,
+    set_default_gpu_memory_utilization,
+    set_default_batch_size,
+)
 from .model_output_to_middle_json import result_to_middle_json
 from ...data.data_reader_writer import DataWriter
 from mineru.utils.pdf_image_tools import load_images_from_pdf
@@ -42,14 +46,22 @@ class ModelSingleton:
             vllm_llm = None
             vllm_async_llm = None
             batch_size = kwargs.get("batch_size", 0)  # for transformers backend only
-            max_concurrency = kwargs.get("max_concurrency", 100)  # for http-client backend only
-            http_timeout = kwargs.get("http_timeout", 600)  # for http-client backend only
+            max_concurrency = kwargs.get(
+                "max_concurrency", 100
+            )  # for http-client backend only
+            http_timeout = kwargs.get(
+                "http_timeout", 600
+            )  # for http-client backend only
             # 从kwargs中移除这些参数，避免传递给不相关的初始化函数
             for param in ["batch_size", "max_concurrency", "http_timeout"]:
                 if param in kwargs:
                     del kwargs[param]
-            if backend in ['transformers', 'vllm-engine', "vllm-async-engine", "mlx-engine"] and not model_path:
-                model_path = auto_download_and_get_model_root_path("/","vlm")
+            if (
+                backend
+                in ["transformers", "vllm-engine", "vllm-async-engine", "mlx-engine"]
+                and not model_path
+            ):
+                model_path = auto_download_and_get_model_root_path("/", "vlm")
                 if backend == "transformers":
                     try:
                         from transformers import (
@@ -58,7 +70,9 @@ class ModelSingleton:
                         )
                         from transformers import __version__ as transformers_version
                     except ImportError:
-                        raise ImportError("Please install transformers to use the transformers backend.")
+                        raise ImportError(
+                            "Please install transformers to use the transformers backend."
+                        )
 
                     if version.parse(transformers_version) >= version.parse("4.56.0"):
                         dtype_key = "dtype"
@@ -79,14 +93,18 @@ class ModelSingleton:
                 elif backend == "mlx-engine":
                     mlx_supported = is_mac_os_version_supported()
                     if not mlx_supported:
-                        raise EnvironmentError("mlx-engine backend is only supported on macOS 13.5+ with Apple Silicon.")
+                        raise EnvironmentError(
+                            "mlx-engine backend is only supported on macOS 13.5+ with Apple Silicon."
+                        )
                     try:
                         from mlx_vlm import load as mlx_load
                     except ImportError:
-                        raise ImportError("Please install mlx-vlm to use the mlx-engine backend.")
+                        raise ImportError(
+                            "Please install mlx-vlm to use the mlx-engine backend."
+                        )
                     model, processor = mlx_load(model_path)
                 else:
-                    if os.getenv('OMP_NUM_THREADS') is None:
+                    if os.getenv("OMP_NUM_THREADS") is None:
                         os.environ["OMP_NUM_THREADS"] = "1"
 
                     if backend == "vllm-engine":
@@ -94,12 +112,18 @@ class ModelSingleton:
                             import vllm
                             from mineru_vl_utils import MinerULogitsProcessor
                         except ImportError:
-                            raise ImportError("Please install vllm to use the vllm-engine backend.")
+                            raise ImportError(
+                                "Please install vllm to use the vllm-engine backend."
+                            )
                         if "gpu_memory_utilization" not in kwargs:
-                            kwargs["gpu_memory_utilization"] = set_default_gpu_memory_utilization()
+                            kwargs["gpu_memory_utilization"] = (
+                                set_default_gpu_memory_utilization()
+                            )
                         if "model" not in kwargs:
                             kwargs["model"] = model_path
-                        if enable_custom_logits_processors() and ("logits_processors" not in kwargs):
+                        if enable_custom_logits_processors() and (
+                            "logits_processors" not in kwargs
+                        ):
                             kwargs["logits_processors"] = [MinerULogitsProcessor]
                         # 使用kwargs为 vllm初始化参数
                         vllm_llm = vllm.LLM(**kwargs)
@@ -109,18 +133,28 @@ class ModelSingleton:
                             from vllm.v1.engine.async_llm import AsyncLLM
                             from mineru_vl_utils import MinerULogitsProcessor
                         except ImportError:
-                            raise ImportError("Please install vllm to use the vllm-async-engine backend.")
+                            raise ImportError(
+                                "Please install vllm to use the vllm-async-engine backend."
+                            )
                         if "gpu_memory_utilization" not in kwargs:
-                            kwargs["gpu_memory_utilization"] = set_default_gpu_memory_utilization()
+                            kwargs["gpu_memory_utilization"] = (
+                                set_default_gpu_memory_utilization()
+                            )
                         if "model" not in kwargs:
                             kwargs["model"] = model_path
-                        if enable_custom_logits_processors() and ("logits_processors" not in kwargs):
+                        if enable_custom_logits_processors() and (
+                            "logits_processors" not in kwargs
+                        ):
                             kwargs["logits_processors"] = [MinerULogitsProcessor]
                         # 使用kwargs为 vllm初始化参数
-                        vllm_async_llm = AsyncLLM.from_engine_args(AsyncEngineArgs(**kwargs))
+                        vllm_async_llm = AsyncLLM.from_engine_args(
+                            AsyncEngineArgs(**kwargs)
+                        )
+                    model_path = None  # model is loaded inside vllm/vllm-async
             self._models[key] = MinerUClient(
                 backend=backend,
                 model=model,
+                model_path=model_path,
                 processor=processor,
                 vllm_llm=vllm_llm,
                 vllm_async_llm=vllm_async_llm,
@@ -144,7 +178,9 @@ def doc_analyze(
     **kwargs,
 ):
     if predictor is None:
-        predictor = ModelSingleton().get_model(backend, model_path, server_url, **kwargs)
+        predictor = ModelSingleton().get_model(
+            backend, model_path, server_url, **kwargs
+        )
 
     # load_images_start = time.time()
     images_list, pdf_doc = load_images_from_pdf(pdf_bytes, image_type=ImageType.PIL)
@@ -171,7 +207,9 @@ async def aio_doc_analyze(
     **kwargs,
 ):
     if predictor is None:
-        predictor = ModelSingleton().get_model(backend, model_path, server_url, **kwargs)
+        predictor = ModelSingleton().get_model(
+            backend, model_path, server_url, **kwargs
+        )
 
     # load_images_start = time.time()
     images_list, pdf_doc = load_images_from_pdf(pdf_bytes, image_type=ImageType.PIL)
