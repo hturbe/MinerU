@@ -38,7 +38,7 @@ ocr_demo
 source.dev.env
 
 tmp
-
+*.egg-info
 projects/web/node_modules
 projects/web/dist
 

@@ -39,7 +39,7 @@ dependencies = [
     "openai>=1.70.0,<3",
     "beautifulsoup4>=4.13.5,<5",
     "magika>=0.6.2,<0.7.0",
-    "mineru-vl-utils>=0.1.15,<1",
+    "mineru-vl-utils",
 ]
 
 [project.optional-dependencies]
@@ -59,7 +59,7 @@ vllm = [
     "vllm>=0.10.1.1,<0.12",
 ]
 mlx = [
-    "mlx-vlm>=0.3.3,<0.4",
+    "mlx-vlm",
 ]
 pipeline = [
     "matplotlib>=3.10,<4",
@@ -156,3 +156,7 @@ exclude_also = [
     'class .*\bProtocol\):',
     '@(abc\.)?abstractmethod',
 ]
+
+[tool.uv.sources]
+mineru-vl-utils = { git = "https://github.com/hturbe/mineru-vl-utils.git" }
+mlx-vlm = { git = "https://github.com/hturbe/mlx-vlm.git" }
